@@ -52,7 +52,7 @@ fn main() {
 
     let args = construct_blender_command(&rendertask);
     
-    args.iter().for_each(|i| println!("{}", i));
+    //args.iter().for_each(|i| println!("{}", i));
 
 
     execute_render(&rendertask).unwrap();
