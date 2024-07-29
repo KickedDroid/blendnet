@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.86"
+futures-lite = "2.3.0"
+iroh-net = "0.21.0"
+tokio = "1.39.2"
+tracing = "0.1.40"
