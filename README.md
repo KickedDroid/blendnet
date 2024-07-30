@@ -1,6 +1,17 @@
 
+# Blendnet 
 
-Usage
+*== Under heavy construction ==*
+
+A customizable render node for blender using `iroh-net` under the hood. 
+
+In Progress:
+- Custom Config files
+- Customized Load Balancing
+- 
+
+
+
 
 ```rust
 fn main() {
