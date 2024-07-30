@@ -3,7 +3,7 @@
 
 *== Under heavy construction ==*
 
-A customizable render node for blender using `iroh-net` under the hood. 
+A customizable distributed render swarm for blender using `iroh-net` under the hood. 
 
 In Progress:
 - Custom Config files
