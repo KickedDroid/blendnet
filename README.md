@@ -11,7 +11,17 @@ In Progress:
 - 
 
 
+# Usage
 
+```
+./blendnet server
+```
+
+Client 
+
+```
+./blendnet client --node-id <NODE_ID> --relay-url <RELAY_URL> --addrs <Addrs>
+```
 
 ```rust
 fn main() {
