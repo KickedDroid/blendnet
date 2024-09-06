@@ -1,47 +1,72 @@
-use std::{error::Error, path::PathBuf, process::Command, str::FromStr};
-mod lib;
-mod client;
-use lib::*;
-
-
-fn test() {
-    let rendertask = RenderTask {
-        id: "1".to_string(),
-        blend_file: PathBuf::from_str("overwerk.blend").unwrap(),
-        start_frame: 0,
-        end_frame: 1,
-        render_engine: RenderEngine::Cycles,
-        threads: 1,
-    };
-
-    execute_render(&rendertask).unwrap();
-    
-}
-
 use anyhow::Context;
 use futures_lite::StreamExt;
-use iroh_net::{endpoint::{Connection, SendStream}, key::SecretKey, relay::RelayMode, Endpoint};
-use tokio::{fs::File, io::AsyncReadExt};
-use tracing::{debug, info};
+use iroh_net::{
+    endpoint::Incoming, endpoint::SendStream, key::SecretKey, relay::RelayMode, Endpoint,
+};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tracing::{info, warn};
+mod client;
+use clap::{Parser, Subcommand};
+use client::run_client;
+use iroh_net::relay::RelayUrl;
+use std::net::SocketAddr;
 
-const RENDER_ALPN: &[u8] = b"n0/iroh/render/0";
+const CHAT_ALPN: &[u8] = b"n0/blendnet/0";
+
+type Clients = Arc<Mutex<HashMap<iroh_net::NodeId, iroh_net::endpoint::SendStream>>>;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Server,
+    Client {
+        #[clap(long)]
+        node_id: iroh_net::NodeId,
+        #[clap(long, value_parser, num_args = 1.., value_delimiter = ' ')]
+        addrs: Vec<SocketAddr>,
+        #[clap(long)]
+        relay_url: RelayUrl,
+    },
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    println!("\nRender Server Starting\n");
+    let cli = Cli::parse();
+    match cli.command {
+        Command::Server => run_server().await,
+        Command::Client {
+            node_id,
+            addrs,
+            relay_url,
+        } => run_client(node_id, addrs, relay_url).await,
+    }
+}
+
+async fn run_server() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+    println!("\nBlendnet Server\n");
+
     let secret_key = SecretKey::generate();
-    println!("Secret key: {secret_key}");
+    println!("Server secret key: {secret_key}");
 
     let endpoint = Endpoint::builder()
         .secret_key(secret_key)
-        .alpns(vec![RENDER_ALPN.to_vec()])
+        .alpns(vec![CHAT_ALPN.to_vec()])
         .relay_mode(RelayMode::Default)
         .bind(0)
         .await?;
 
-    let me = endpoint.node_id();
-    println!("Node ID: {me}");
-    println!("Listening addresses:");
+    let server_id = endpoint.node_id();
+    println!("Server node id: {server_id}");
+    println!("Server listening addresses:");
 
     let local_addrs = endpoint
         .direct_addresses()
@@ -60,46 +85,59 @@ async fn main() -> anyhow::Result<()> {
     let relay_url = endpoint
         .home_relay()
         .expect("should be connected to a relay server");
-    println!("Relay server URL: {relay_url}");
+    println!("Server relay url: {relay_url}");
 
-    while let Some(mut conn) = endpoint.accept().await {
-        let alpn = conn.alpn().await?;
-        let conn = conn.await?;
-        let node_id = iroh_net::endpoint::get_remote_node_id(&conn)?;
-        info!(
-            "New connection from {node_id} with ALPN {} (from {})",
-            String::from_utf8_lossy(&alpn),
-            conn.remote_address()
-        );
+    println!("\nTo connect, run the chat client with:");
+    println!(
+        "\tblendnet client --node-id {server_id} --addrs \"{local_addrs}\" --relay-url {relay_url}\n"
+    );
 
-        tokio::spawn(async move {
-            handle_connection(conn).await
-        });
+    let clients: Clients = Arc::new(Mutex::new(HashMap::new()));
+
+    while let Some(incoming) = endpoint.accept().await {
+        let clients = clients.clone();
+        tokio::spawn(async move { handle_connection(incoming, clients).await });
     }
 
     Ok(())
 }
 
-async fn handle_connection(conn: Connection) -> anyhow::Result<()> {
+async fn handle_connection(incoming: Incoming, clients: Clients) -> anyhow::Result<()> {
+    let connecting = match incoming.accept() {
+        Ok(connecting) => connecting,
+        Err(err) => {
+            warn!("incoming connection failed: {err:#}");
+            return Ok(());
+        }
+    };
+
+    let conn = connecting.await?;
+    let node_id = iroh_net::endpoint::get_remote_node_id(&conn)?;
+    println!("New connection from {node_id}");
+
     let (mut send, mut recv) = conn.accept_bi().await?;
-    debug!("Accepted bi-directional stream, sending Blend file...");
-    
-    let blend_file_path = PathBuf::from("path/to/your/blend/file.blend");
-    send_file(&mut send, &blend_file_path).await?;
 
-    let result = recv.read_to_end(1000).await?;
-    println!("Render result: {}", String::from_utf8_lossy(&result));
+    // Add client to the list
+    clients.lock().await.insert(node_id, send);
 
-    Ok(())
-}
+    // Handle incoming messages
+    while let Ok(message) = recv.read_to_end(1024).await {
+        let message = String::from_utf8(message)?;
+        let broadcast_message = format!("{}: {}", node_id, message);
 
-async fn send_file(send: &mut SendStream, file_path: &PathBuf) -> anyhow::Result<()> {
-    let mut file = File::open(file_path).await?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).await?;
-    
-    send.write_all(&buffer).await?;
-    send.finish().await?;
-    
+        // Broadcast message to all clients
+        for (client_id, client_send) in clients.lock().await.iter_mut() {
+            if *client_id != node_id {
+                if let Err(e) = client_send.write_all(broadcast_message.as_bytes()).await {
+                    warn!("Failed to send message to {}: {}", client_id, e);
+                }
+            }
+        }
+    }
+
+    // Remove client when disconnected
+    clients.lock().await.remove(&node_id);
+    println!("Client {} disconnected", node_id);
+
     Ok(())
 }

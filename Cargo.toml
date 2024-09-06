@@ -5,7 +5,10 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
+clap = {version="4.5.17", features=["derive"]}
 futures-lite = "2.3.0"
-iroh-net = "0.21.0"
+iroh-net = "0.24.0"
+quinn = "0.11.5"
 tokio = "1.39.2"
 tracing = "0.1.40"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
