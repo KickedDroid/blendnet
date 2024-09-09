@@ -52,9 +52,9 @@ pub(crate) struct ControlNode {
 
 #[derive(Debug)]
 pub(crate) struct RenderResult {
-    task_id: String,
-    frame_number: u32,
-    output_file: PathBuf,
+    pub(crate) task_id: String,
+    pub frame_number: u32,
+    pub output_file: PathBuf,
 }
 
 pub fn execute_render(task: &RenderTask) -> Result<(), Box<dyn Error>> {
@@ -87,7 +87,7 @@ fn construct_blender_task(task: &RenderTask) -> Vec<String> {
         "-x".to_string(),
         "1".to_string(),
         "-o".to_string(),
-        "src/output".to_string(),
+        "output/".to_string(),
         "-a".to_string(),
     ]
 }

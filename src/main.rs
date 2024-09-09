@@ -8,6 +8,7 @@ use std::{collections::HashMap, path::PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{info, warn};
+mod lib;
 mod client;
 use clap::{Parser, Subcommand};
 use client::run_client;
