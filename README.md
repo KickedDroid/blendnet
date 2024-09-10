@@ -5,10 +5,19 @@
 
 A customizable distributed render swarm for blender using `iroh-net` under the hood. 
 
+Features:
+- Connect using `iroh-relay`
+- Recieve Renders to specific OutDir
+- Client Terminates after Render. ( Intended - to save costs ) 
+
 In Progress:
+- Private Pkarr discovery
+- Gossip Subscriptions for workload propagation.
 - Custom Config files
 - Customized Load Balancing
-- 
+- Dockerfile
+- Easy Deplyment on VPS
+- Blender Sandboxing
 
 
 # Usage
