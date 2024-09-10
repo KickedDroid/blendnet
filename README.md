@@ -8,7 +8,7 @@ A customizable distributed render swarm for blender using `iroh-net` under the h
 Features:
 - Connect using `iroh-relay`
 - Recieve Renders to specific OutDir
-- Client Terminates after Render. ( Intended - to save costs ) 
+- Ephemeral Client - Terminates after Render. ( Intended - to save costs ) 
 
 In Progress:
 - Private Pkarr discovery
@@ -18,6 +18,7 @@ In Progress:
 - Dockerfile
 - Easy Deplyment on VPS
 - Blender Sandboxing
+- Fail to destroy. 
 
 
 # Usage
