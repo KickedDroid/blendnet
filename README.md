@@ -11,6 +11,7 @@ Features:
 - Ephemeral Client - Terminates after Render. ( Intended - to save costs ) 
 
 In Progress:
+- Client Daemon
 - Private Pkarr discovery
 - Gossip Subscriptions for workload propagation.
 - Custom Config files
