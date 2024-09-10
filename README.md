@@ -18,7 +18,7 @@ In Progress:
 - Dockerfile
 - Easy Deplyment on VPS
 - Blender Sandboxing
-- Fail to destroy. 
+- Fail to destroy. ( Dstroys Artifacts and terminates for self presvervation ) 
 
 
 # Usage
