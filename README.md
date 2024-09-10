@@ -32,10 +32,6 @@ Client
 ./blendnet client --node-id <NODE_ID> --relay-url <RELAY_URL> --addrs <Addrs>
 ```
 
-```
-
-```
-
 
 Example output 
 
