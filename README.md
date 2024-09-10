@@ -14,7 +14,7 @@ In Progress:
 # Usage
 
 ```
-blendnet server --input <Blender_File>
+blendnet server --input <Blender_File> --output <OUT_DIR>
 ```
 
 Client 
