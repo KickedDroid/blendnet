@@ -3,7 +3,7 @@
 
 *== Under heavy construction ==*
 
-A customizable distributed render swarm for blender using `iroh-net` under the hood. 
+A customizable distributed render swarm for blender using `iroh-net` under the hood.  
 
 Features:
 - Connect using `iroh-relay`
